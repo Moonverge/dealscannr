@@ -1,0 +1,15 @@
+{
+  "name": "dealscannr",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "web": "npm run dev -w @dealscannr/web",
+    "api": "bash scripts/run-api.sh",
+    "api:venv": "cd packages/api && python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt",
+    "ingest": "bash scripts/ingest.sh",
+    "test:api": "cd e2e && python -m pytest api/ -q",
+    "test:web": "cd packages/web && npx tsc --noEmit",
+    "test:e2e": "cd e2e/web && npx playwright test",
+    "test": "npm run test:api && npm run test:web"
+  }
+}

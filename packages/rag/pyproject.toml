@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dealscannr-rag"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.5",
+    "groq>=0.4",
+    "qdrant-client>=1.7",
+    "openai>=1.12",
+    "httpx>=0.26",
+    "rapidfuzz>=3.6.0",
+]
+
+[tool.setuptools.packages]
+find = {}

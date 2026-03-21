@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyc
+*.egg-info/
+.eggs/
+.venv/
+venv/
+dist/
+build/
+
+# Node
+node_modules/
+**/dist/
+.next/
+.nuxt/
+.turbo/
+
+# Environment (never commit secrets)
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+!**/.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# IDE
+.cursor/
+.vscode/
+.idea/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+playwright-report/
+test-results/
+
+# Misc
+*.swp
+*.swo
+*~

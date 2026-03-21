@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 5300:27017
+        options: >-
+          --health-cmd "mongosh --eval \"db.adminCommand('ping')\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 5400:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 5500:6333
+          - 5501:6334
+        options: >-
+          --health-cmd "bash -c 'printf \"GET /healthz HTTP/1.0\r\n\r\n\" | nc -w 2 localhost 6333 | grep -q 200'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 20s
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: packages/api/requirements.txt
+      - name: Install API deps
+        run: |
+          cd packages/api
+          python -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+      - name: Install e2e deps
+        run: ${{ github.workspace }}/packages/api/.venv/bin/pip install -r e2e/requirements.txt
+      - name: Run pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}/packages:${{ github.workspace }}/packages/api
+          DATABASE_URL: mongodb://localhost:5300/dealscannr_test
+          REDIS_URL: redis://localhost:5400
+          QDRANT_URL: http://localhost:5500
+          GROQ_API_KEY: test-key-not-real
+          JWT_SECRET: test-secret-32-chars-minimum-ok
+          DISABLE_AP_SCHEDULER: "1"
+        run: |
+          cd e2e
+          ../packages/api/.venv/bin/python -m pytest api/ -q --tb=short
+
+  web-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install deps
+        run: npm install
+      - name: TypeScript check
+        run: cd packages/web && npx tsc --noEmit
+
+  playwright:
+    needs: [api-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm install
+      - run: cd packages/web && npm run build
+        env:
+          VITE_API_URL: http://localhost:5200
+      - run: cd e2e/web && npm install && npx playwright install --with-deps chromium
+      - name: Start preview server + run tests
+        run: |
+          cd packages/web && npx vite preview --port 5100 &
+          sleep 3
+          cd e2e/web && npx playwright test --reporter=line
+        env:
+          VITE_API_URL: http://localhost:5200
+          PLAYWRIGHT_BASE_URL: http://localhost:5100
