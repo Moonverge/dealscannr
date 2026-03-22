@@ -2,9 +2,8 @@ import argparse
 import re
 import sys
 
-from qdrant_client import QdrantClient
-
 from rag.embeddings import embed_texts, embedding_vector_dim
+from rag.utils.qdrant_client_factory import qdrant_client as _make_qdrant_client
 
 from .chunk_text import build_chunk_payloads, split_blocks
 from .config import settings
@@ -73,7 +72,7 @@ def run(company_query: str) -> int:
     except Exception as e:
         print(f"Embedding failed: {e}", file=sys.stderr)
         return 1
-    client = QdrantClient(url=settings.qdrant_url, check_compatibility=False)
+    client = _make_qdrant_client(settings.qdrant_url, settings.qdrant_api_key)
     from ingestion.dim_guard import verify_collection_dim_sync
     from ingestion.qdrant_store import COLLECTION
 

@@ -16,6 +16,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from config.settings import settings as app_settings
+from rag.utils.qdrant_client_factory import qdrant_client as _make_qdrant_client
 from db.mongo import get_database
 from rag.connectors.base import BaseConnector, ConnectorResult, RawChunk
 from rag.connectors.settings import ConnectorSettings
@@ -128,10 +129,11 @@ def _upsert_qdrant_sync(
     qdrant_url: str,
     vector_size: int,
     points: list[PointStruct],
+    qdrant_api_key: str | None,
 ) -> Any:
     if not points or not qdrant_url:
         return None
-    client = QdrantClient(url=qdrant_url, check_compatibility=False)
+    client = _make_qdrant_client(qdrant_url, qdrant_api_key)
     _ensure_collection(client, vector_size)
     return client.upsert(collection_name=QDRANT_COLLECTION, points=points)
 
@@ -254,6 +256,7 @@ async def run_scan_pipeline(
                 app_settings.qdrant_url,
                 QDRANT_COLLECTION,
                 vdim,
+                qdrant_api_key=app_settings.qdrant_api_key,
             )
         except ValueError as e:
             logger.critical("scan_qdrant_dim_mismatch scan_id=%s err=%s", scan_id, e)
@@ -355,6 +358,7 @@ async def run_scan_pipeline(
                 app_settings.qdrant_url,
                 vdim,
                 points,
+                app_settings.qdrant_api_key,
             )
             logger.info(
                 "qdrant_upsert_complete scan_id=%s points_count=%s result=%r",
@@ -369,6 +373,7 @@ async def run_scan_pipeline(
     engine = RAGEngine(
         groq_api_key=app_settings.groq_api_key,
         qdrant_url=app_settings.qdrant_url,
+        qdrant_api_key=app_settings.qdrant_api_key,
         openai_api_key=app_settings.openai_api_key,
         together_api_key=app_settings.together_api_key,
         nomic_api_key=app_settings.nomic_api_key,

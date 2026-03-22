@@ -30,6 +30,7 @@ def run_search(query: str) -> IntelligenceReport:
     engine = RAGEngine(
         groq_api_key=settings.groq_api_key,
         qdrant_url=settings.qdrant_url,
+        qdrant_api_key=settings.qdrant_api_key,
         openai_api_key=settings.openai_api_key,
         together_api_key=settings.together_api_key,
         nomic_api_key=settings.nomic_api_key,

@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI):
                 qdrant_url=settings.qdrant_url.rstrip("/"),
                 collection_name="dealscannr_chunks",
                 expected_dim=expected_dim,
+                qdrant_api_key=settings.qdrant_api_key,
             )
             log.info("qdrant_dim_ok dim=%s", expected_dim)
     except ValueError as e:
@@ -148,9 +149,13 @@ async def _redis_status() -> str:
 async def _qdrant_status() -> str:
     base = settings.qdrant_url.rstrip("/")
     url = f"{base}/collections"
+    headers: dict[str, str] = {}
+    key = (settings.qdrant_api_key or "").strip()
+    if key:
+        headers["api-key"] = key
     try:
         async with httpx.AsyncClient(timeout=2.5) as client:
-            resp = await client.get(url)
+            resp = await client.get(url, headers=headers or None)
         return "ok" if resp.status_code == 200 else "error"
     except Exception:
         return "error"

@@ -8,6 +8,8 @@ from typing import Any
 
 from qdrant_client import QdrantClient
 
+from rag.utils.qdrant_client_factory import qdrant_client as _make_qdrant_client
+
 logger = logging.getLogger(__name__)
 
 COLLECTION_DEFAULT = "dealscannr_chunks"
@@ -69,8 +71,9 @@ def verify_collection_dim_for_url_sync(
     qdrant_url: str,
     collection_name: str,
     expected_dim: int,
+    qdrant_api_key: str | None = None,
 ) -> None:
-    client = QdrantClient(url=qdrant_url.rstrip("/"), check_compatibility=False)
+    client = _make_qdrant_client(qdrant_url, qdrant_api_key)
     verify_collection_dim_sync(client, collection_name, expected_dim)
 
 
@@ -78,6 +81,8 @@ async def verify_collection_dim(
     qdrant_url: str,
     collection_name: str,
     expected_dim: int,
+    *,
+    qdrant_api_key: str | None = None,
 ) -> None:
     """Async wrapper (runs sync Qdrant client in a thread)."""
     await asyncio.to_thread(
@@ -85,6 +90,7 @@ async def verify_collection_dim(
         qdrant_url,
         collection_name,
         expected_dim,
+        qdrant_api_key,
     )
 
 

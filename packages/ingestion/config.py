@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     )
 
     qdrant_url: str = "http://localhost:5500"
+    qdrant_api_key: str | None = None
     openai_api_key: str | None = None
     together_api_key: str | None = None
     nomic_api_key: str | None = None

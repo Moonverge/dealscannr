@@ -192,6 +192,7 @@ class RAGEngine:
         self,
         groq_api_key: str | None = None,
         qdrant_url: str | None = None,
+        qdrant_api_key: str | None = None,
         openai_api_key: str | None = None,
         together_api_key: str | None = None,
         nomic_api_key: str | None = None,
@@ -200,6 +201,7 @@ class RAGEngine:
     ):
         self.groq_api_key = groq_api_key or os.environ.get("GROQ_API_KEY")
         self.qdrant_url = qdrant_url or os.environ.get("QDRANT_URL")
+        self.qdrant_api_key = qdrant_api_key or os.environ.get("QDRANT_API_KEY")
         self.openai_api_key = openai_api_key or os.environ.get("OPENAI_API_KEY")
         self.llm_provider = (llm_provider or os.environ.get("LLM_PROVIDER") or "openai").strip().lower()
         self.together_api_key = together_api_key or os.environ.get("TOGETHER_API_KEY")
@@ -336,6 +338,7 @@ class RAGEngine:
                 limit=40,
                 vector_size=vdim,
                 scan_id=sid,
+                qdrant_api_key=self.qdrant_api_key,
             )
             logger.info("qdrant_retrieve_result scan_id=%s hits_count=%s", sid, len(chunks))
             if not chunks:
@@ -352,6 +355,7 @@ class RAGEngine:
                     limit=40,
                     vector_size=vdim,
                     entity_id=eid,
+                    qdrant_api_key=self.qdrant_api_key,
                 )
                 logger.info("qdrant_retrieve_result entity_id=%s hits_count=%s", eid, len(chunks))
             if not chunks:
@@ -362,6 +366,7 @@ class RAGEngine:
                     slug,
                     limit=20,
                     vector_size=vdim,
+                    qdrant_api_key=self.qdrant_api_key,
                 )
                 logger.info(
                     "qdrant_retrieve_result company_slug=%s hits_count=%s",
@@ -385,6 +390,7 @@ class RAGEngine:
                 slug,
                 limit=20,
                 vector_size=vdim,
+                qdrant_api_key=self.qdrant_api_key,
             )
             top_k = 8
         top_chunks = rerank(chunks, top_k=top_k)

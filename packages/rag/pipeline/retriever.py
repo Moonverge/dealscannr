@@ -3,12 +3,14 @@ from typing import Any
 
 # Optional Qdrant; if not installed or no QDRANT_URL, we skip real retrieval
 try:
-    from qdrant_client import QdrantClient
     from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+    from rag.utils.qdrant_client_factory import qdrant_client as _make_qdrant_client
 
     QDRANT_AVAILABLE = True
 except Exception:
     QDRANT_AVAILABLE = False
+    _make_qdrant_client = None  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +25,12 @@ def retrieve_chunks(
     vector_size: int = 1536,
     scan_id: str | None = None,
     entity_id: str | None = None,
+    qdrant_api_key: str | None = None,
 ) -> list[dict[str, Any]]:
-    if not QDRANT_AVAILABLE or not qdrant_url:
+    if not QDRANT_AVAILABLE or not qdrant_url or _make_qdrant_client is None:
         return []
     try:
-        client = QdrantClient(url=qdrant_url, check_compatibility=False)
+        client = _make_qdrant_client(qdrant_url, qdrant_api_key)
         z = [0.0] * vector_size
         must: list = []
         if scan_id is not None and str(scan_id).strip() != "":

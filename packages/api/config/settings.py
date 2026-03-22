@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     database_url: str = "mongodb://localhost:5300/dealscannr"
     redis_url: str = "redis://localhost:5400"
     qdrant_url: str = "http://localhost:5500"
+    qdrant_api_key: str | None = None
     # Groq is LLM-only. Do not use for embeddings.
     groq_api_key: str | None = None
     openai_api_key: str | None = None

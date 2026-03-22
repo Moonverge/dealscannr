@@ -13,7 +13,13 @@ def main() -> int:
     if not url:
         print("Set QDRANT_URL", file=sys.stderr)
         return 1
-    client = QdrantClient(url=url.rstrip("/"), check_compatibility=False)
+    u = url.rstrip("/")
+    key = (os.environ.get("QDRANT_API_KEY") or "").strip() or None
+    client = (
+        QdrantClient(url=u, api_key=key, check_compatibility=False)
+        if key
+        else QdrantClient(url=u, check_compatibility=False)
+    )
     try:
         client.delete_collection("dealscannr_chunks")
     except Exception as e:
