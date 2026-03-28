@@ -16,6 +16,11 @@ GUEST_COOKIE_NAME = "ds_guest"
 GUEST_COOKIE_MAX_AGE = 90 * 24 * 60 * 60
 
 
+def guest_cookie_samesite() -> str:
+    """Lax for local HTTP. None when Secure so credentialed cross-origin SPA→API requests send ds_guest."""
+    return "none" if settings.guest_cookie_secure else "lax"
+
+
 def client_ip(request: StarletteRequest) -> str:
     if request.client and request.client.host:
         return request.client.host
@@ -58,7 +63,7 @@ async def ensure_guest_session(
         value=guest_id,
         max_age=GUEST_COOKIE_MAX_AGE,
         httponly=True,
-        samesite="lax",
+        samesite=guest_cookie_samesite(),
         secure=bool(settings.guest_cookie_secure),
         path="/",
     )

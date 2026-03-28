@@ -56,6 +56,53 @@ def test_resolve_by_name_fuzzy_match(client, auth_headers, clean_db):
     assert data["candidates"][0]["legal_name"] == "Stripe Inc"
 
 
+def test_resolve_explicit_domain_skips_fuzzy_wrong_company(client, auth_headers, clean_db):
+    """User types exact domain (e.g. kooya.ph) — never substitute a fuzzy DB hit with a different domain."""
+    _seed_entity(
+        {
+            "legal_name": "Kooyal",
+            "domain": "kooyal.com",
+            "aliases": [],
+            "confidence": 0.9,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+    )
+    r = client.post(
+        "/api/entity/resolve",
+        json={"name": "kooya.ph", "domain_hint": "kooya.ph"},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["candidates"]) == 1
+    assert data["candidates"][0]["domain"] == "kooya.ph"
+    assert data["candidates"][0].get("source") == "explicit_domain"
+
+
+def test_resolve_domain_hint_blocks_fuzzy_early_return_when_domains_differ(client, auth_headers, clean_db):
+    """Fuzzy name match must not win when domain_hint points at a different intended domain."""
+    _seed_entity(
+        {
+            "legal_name": "Kooyal",
+            "domain": "kooyal.com",
+            "aliases": [],
+            "confidence": 0.9,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+    )
+    r = client.post(
+        "/api/entity/resolve",
+        json={"name": "Kooya", "domain_hint": "kooya.ph"},
+        headers=auth_headers,
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["candidates"]
+    assert data["candidates"][0]["domain"] == "kooya.ph"
+
+
 def test_resolve_low_confidence_returns_candidates(client, auth_headers, clean_db):
     r = client.post(
         "/api/entity/resolve",

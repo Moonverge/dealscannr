@@ -12,7 +12,10 @@ import {
 } from '@/hooks/api/guest.hooks'
 import { getAxiosStatus } from '@/hooks/api/http'
 import type { ClearbitSuggestion, EntityCandidate } from '@/hooks/api/types'
+import { GuestTrialGateModal } from '@/components/try/GuestTrialGateModal'
 import { useToast } from '@/components/ui/ToastContext'
+import { domainStemTitleCase } from '@/lib/domain-legal-name'
+import { guestTrialErrorFromAxios, type GuestTrialModalVariant } from '@/lib/guest-trial-errors'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -54,6 +57,7 @@ export function TryScan() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
   const scanInputWrapRef = useRef<HTMLDivElement>(null)
+  const [trialModal, setTrialModal] = useState<GuestTrialModalVariant | null>(null)
 
   const busy = resolveMut.isPending || confirmMut.isPending || createScanMut.isPending
 
@@ -97,6 +101,8 @@ export function TryScan() {
           if (axios.isCancel(e)) return
           const code = (e as { code?: string }).code
           if (code === 'ERR_CANCELED') return
+          const modal = guestTrialErrorFromAxios(e)
+          if (modal) setTrialModal(modal)
           setSuggestions([])
           setShowDropdown(false)
         }
@@ -131,8 +137,11 @@ export function TryScan() {
   const confirmAndStart = useCallback(
     async (c: EntityCandidate | null, manual?: string) => {
       setErr(null)
-      const legal = c?.legal_name ?? query.trim()
       const dom = (manual ?? c?.domain ?? '').trim()
+      const legal =
+        manual != null && manual.trim()
+          ? domainStemTitleCase(manual.trim())
+          : c?.legal_name ?? query.trim()
       try {
         const data = await confirmMut.mutateAsync({
           legal_name: legal,
@@ -161,16 +170,13 @@ export function TryScan() {
         }
         navigate(`/try/scan/${scan.scan_id}/progress`)
       } catch (e) {
+        const modal = guestTrialErrorFromAxios(e)
+        if (modal) {
+          setTrialModal(modal)
+          return
+        }
         const st = getAxiosStatus(e)
-        const code = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
-        if (st === 403 && (code === 'guest_scan_exhausted' || code === 'guest_ip_limit')) {
-          const msg =
-            code === 'guest_ip_limit'
-              ? 'A trial scan was already used from this network recently. Create a free account to continue.'
-              : 'Your free trial scan was already used. Sign up to run more scans.'
-          setErr(msg)
-          toast('error', msg)
-        } else if (st === 429) {
+        if (st === 429) {
           setErr('Too many requests — wait about 30 seconds and try again.')
           toast('warning', 'Rate limited — try again shortly.')
         } else {
@@ -233,7 +239,12 @@ export function TryScan() {
         const first = list[0]
         setPick(first ? (first.candidate_id ?? first.legal_name) : 'manual')
       }
-    } catch {
+    } catch (e) {
+      const modal = guestTrialErrorFromAxios(e)
+      if (modal) {
+        setTrialModal(modal)
+        return
+      }
       setErr('Could not resolve company. Check spelling and try again.')
       toast('error', 'Resolve failed')
     }
@@ -303,6 +314,11 @@ export function TryScan() {
 
   return (
     <PublicLayout>
+      <GuestTrialGateModal
+        open={trialModal !== null}
+        onClose={() => setTrialModal(null)}
+        variant={trialModal}
+      />
       <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 py-8 text-[var(--text)]">
         <PageHeader
           title="Try your first scan"

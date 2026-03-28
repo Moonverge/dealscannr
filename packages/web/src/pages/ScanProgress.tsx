@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Newspaper, Users, Wrench } from 'lucide-react'
 import { useScanStatusQuery } from '@/hooks/api/scans.hooks'
+import { GuestTrialGateModal } from '@/components/try/GuestTrialGateModal'
+import { guestTrialErrorFromAxios } from '@/lib/guest-trial-errors'
 import { readScanMeta } from '@/lib/scan-meta'
 import { StatusDot } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -53,6 +55,8 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
   const isGuest = guestMode === true || pathname.startsWith('/try/')
   const meta = readScanMeta(scanId)
   const { data, error } = useScanStatusQuery(scanId, isGuest)
+  const [trialDismissed, setTrialDismissed] = useState(false)
+  const trialKind = isGuest && error ? guestTrialErrorFromAxios(error) : null
   const [flashed, setFlashed] = useState<Record<string, boolean>>({})
   const prevStatus = useRef<Record<string, string>>({})
   /** Re-render once per second while running so elapsed from `created_at` stays current. */
@@ -61,6 +65,10 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
   useEffect(() => {
     document.title = 'Scan in progress — DealScannr'
   }, [])
+
+  useEffect(() => {
+    setTrialDismissed(false)
+  }, [error, scanId])
 
   useEffect(() => {
     if (!data?.lanes) return
@@ -144,6 +152,13 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
 
   const inner = (
     <div className="mx-auto max-w-[640px] px-4 py-4 text-[var(--text)] lg:py-6">
+      {isGuest && trialKind ? (
+        <GuestTrialGateModal
+          open={!trialDismissed}
+          onClose={() => setTrialDismissed(true)}
+          variant={trialKind}
+        />
+      ) : null}
       {isGuest ? (
         <p className="mb-4 rounded-[var(--radius-md)] border border-[var(--accentBorder)] bg-[var(--accentSoft)] px-3 py-2 text-center text-sm text-[var(--text)]">
           <Link to="/register" className="font-medium text-[var(--accent)] underline">
@@ -165,11 +180,11 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
         elapsed
       </p>
 
-      {error && (
+      {error && !(isGuest && trialKind && !trialDismissed) ? (
         <p className="mt-4 text-sm text-[var(--red)]" role="alert">
           {(error as Error).message || 'Failed to load status'}
         </p>
-      )}
+      ) : null}
 
       <ul className="mt-8 space-y-3">
         {LANES.map((lane) => {

@@ -18,6 +18,8 @@ import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PublicLayout } from '@/components/layout/PublicLayout'
+import { GuestTrialGateModal } from '@/components/try/GuestTrialGateModal'
+import { guestTrialErrorFromAxios } from '@/lib/guest-trial-errors'
 import { useToast } from '@/components/ui/ToastContext'
 import { cn } from '@/lib/cn'
 import { normalizeVerdict, verdictStyles } from '@/lib/verdict-styles'
@@ -155,6 +157,8 @@ export function ScanReport({ guestMode }: ScanReportProps = {}) {
 
   const { data, isLoading, error } = useScanReportQuery(scanId, isGuest)
   const { data: prevScan } = usePreviousScanQuery(scanId, isGuest)
+  const [trialDismissed, setTrialDismissed] = useState(false)
+  const trialKind = isGuest && error ? guestTrialErrorFromAxios(error) : null
 
   const companyName = meta?.company || 'Company'
   const domain = meta?.domain || ''
@@ -164,6 +168,10 @@ export function ScanReport({ guestMode }: ScanReportProps = {}) {
   useEffect(() => {
     document.title = `${companyName} — Report — DealScannr`
   }, [companyName])
+
+  useEffect(() => {
+    setTrialDismissed(false)
+  }, [error, scanId])
 
   const sectionKeys = useMemo(() => {
     if (!data?.sections) return []
@@ -310,7 +318,18 @@ export function ScanReport({ guestMode }: ScanReportProps = {}) {
   if (error || !data) {
     const errBody = (
       <div className="mx-auto max-w-lg py-12 text-center">
-        <p className="text-sm text-[var(--red)]">Could not load report.</p>
+        {isGuest && trialKind ? (
+          <GuestTrialGateModal
+            open={!trialDismissed}
+            onClose={() => setTrialDismissed(true)}
+            variant={trialKind}
+          />
+        ) : null}
+        {!(isGuest && trialKind && !trialDismissed) ? (
+          <p className="text-sm text-[var(--red)]" role="alert">
+            Could not load report.
+          </p>
+        ) : null}
         <Link
           to={isGuest ? '/try' : '/dashboard'}
           className="mt-4 inline-block text-sm text-[var(--accent)] underline"

@@ -63,11 +63,9 @@ async def resolve_entity(
     name: str,
     domain_hint: str | None = None,
 ) -> dict[str, Any]:
-    legal = (name or "").strip()
-    if not legal:
+    raw_name = (name or "").strip()
+    if not raw_name:
         return {"candidates": [], "confidence": 0.0}
-    if _looks_like_url_or_domain(legal):
-        legal = domain_to_legal_name(legal)
 
     hint = _normalize_domain(domain_hint or "")
     if hint:
@@ -77,6 +75,27 @@ async def resolve_entity(
                 "candidates": [_entity_candidate(exact, 0.95)],
                 "confidence": 0.95,
             }
+        # User typed exactly this domain (e.g. kooya.ph) — never substitute a fuzzy DB match with a different domain.
+        if _normalize_domain(raw_name) == hint:
+            ln = domain_to_legal_name(hint)
+            return {
+                "candidates": [
+                    {
+                        "candidate_id": None,
+                        "legal_name": ln,
+                        "domain": hint,
+                        "hq_city": None,
+                        "hq_country": None,
+                        "confidence": 0.92,
+                        "source": "explicit_domain",
+                    }
+                ],
+                "confidence": 0.92,
+            }
+
+    legal = raw_name
+    if _looks_like_url_or_domain(legal):
+        legal = domain_to_legal_name(legal)
 
     cursor = db.entities.find({})
     scored: list[tuple[float, dict]] = []
@@ -90,10 +109,15 @@ async def resolve_entity(
 
     scored.sort(key=lambda x: -x[0])
     if scored and scored[0][0] >= 0.85:
-        return {
-            "candidates": [_entity_candidate(scored[0][1], scored[0][0])],
-            "confidence": scored[0][0],
-        }
+        top_doc = scored[0][1]
+        top_dom = _normalize_domain(str(top_doc.get("domain") or ""))
+        if hint and top_dom and top_dom != hint:
+            pass
+        else:
+            return {
+                "candidates": [_entity_candidate(scored[0][1], scored[0][0])],
+                "confidence": scored[0][0],
+            }
 
     ddg_domain = await _ddg_guess_domain(legal)
     candidates: list[dict[str, Any]] = []

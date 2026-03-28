@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from config.settings import settings
 from db.mongo import get_database
 from modules.auth.deps import CurrentUser
-from modules.guest.session import GUEST_COOKIE_NAME, read_guest_cookie
+from modules.guest.session import GUEST_COOKIE_NAME, guest_cookie_samesite, read_guest_cookie
 
 router = APIRouter()
 
@@ -74,7 +74,7 @@ async def auth_register(request: Request, body: RegisterBody):
         out.delete_cookie(
             GUEST_COOKIE_NAME,
             path="/",
-            samesite="lax",
+            samesite=guest_cookie_samesite(),
             httponly=True,
             secure=bool(settings.guest_cookie_secure),
         )
