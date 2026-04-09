@@ -43,15 +43,17 @@ test('full scan flow with mocked API', async ({ page }) => {
   await page.route('**/api/scans/history**', async (route) => {
     await route.fulfill({ status: 200, body: JSON.stringify({ scans: [], total: 0, page: 1, limit: 20 }) })
   })
+  await page.route('**/api/entity/autocomplete**', async (route) => {
+    await route.fulfill({ status: 200, body: JSON.stringify([]) })
+  })
   await page.route('**/api/entity/resolve', async (route) => {
     await route.fulfill({
       status: 200,
       body: JSON.stringify({
         candidates: [
-          { candidate_id: null, legal_name: 'A Co', domain: 'a.co', confidence: 0.5, source: 'hint' },
-          { candidate_id: null, legal_name: 'B Co', domain: 'b.co', confidence: 0.45, source: 'hint' },
+          { candidate_id: null, legal_name: 'A Co', domain: 'a.co', confidence: 0.95, source: 'hint' },
         ],
-        confidence: 0.5,
+        confidence: 0.95,
       }),
     })
   })
@@ -106,18 +108,16 @@ test('full scan flow with mocked API', async ({ page }) => {
     )
   })
   await page.goto('/dashboard')
-  await page.getByPlaceholder(/company legal name/i).fill('MockCo')
-  await page.getByRole('button', { name: /resolve entity/i }).click()
-  await expect(page.getByRole('heading', { name: /pick the right company/i })).toBeVisible()
-  await page.getByRole('button', { name: /A Co/i }).click()
-  await page.getByRole('button', { name: /start scan/i }).click()
-  await expect(page).toHaveURL(/\/scan\/test-123\/progress/)
+  await page.getByLabel(/company name or domain/i).fill('MockCo')
+  await page.getByRole('button', { name: /scan/i }).click()
+  // High confidence single match → auto-starts, navigates to progress
+  await expect(page).toHaveURL(/\/scan\/test-123\/progress/, { timeout: 10_000 })
   await expect(page).toHaveURL(/\/scan\/test-123\/report/, { timeout: 15_000 })
   await expect(page.getByText('MEET')).toBeVisible()
   await expect(page.getByText(/Disclaimer text/)).toBeVisible()
 })
 
-test('402 shows message on dashboard', async ({ page }) => {
+test('402 shows credits error on dashboard', async ({ page }) => {
   await page.route('**/api/auth/me', async (route) => {
     await route.fulfill({
       status: 200,
@@ -143,23 +143,39 @@ test('402 shows message on dashboard', async ({ page }) => {
   await page.route('**/api/scans/history**', async (route) => {
     await route.fulfill({ status: 200, body: JSON.stringify({ scans: [], total: 0, page: 1, limit: 20 }) })
   })
-  await page.route('**/api/scans', async (route) => {
+  await page.route('**/api/entity/autocomplete**', async (route) => {
+    await route.fulfill({ status: 200, body: JSON.stringify([]) })
+  })
+  await page.route('**/api/entity/resolve', async (route) => {
     await route.fulfill({
-      status: 402,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'credits_exhausted', message: 'No credits' }),
+      status: 200,
+      body: JSON.stringify({
+        candidates: [
+          { candidate_id: null, legal_name: 'X Co', domain: 'x.co', confidence: 0.95, source: 'hint' },
+        ],
+        confidence: 0.95,
+      }),
     })
   })
   await page.route('**/api/entity/confirm', async (route) => {
     await route.fulfill({ status: 200, body: JSON.stringify({ entity_id: 'e1' }) })
   })
+  await page.route('**/api/scans', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 402,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'credits_exhausted', message: 'No credits' }),
+      })
+    } else {
+      await route.continue()
+    }
+  })
   await page.addInitScript(() => {
     localStorage.setItem('dealscannr.auth', JSON.stringify({ state: { token: 'x' }, version: 0 }))
   })
   await page.goto('/dashboard')
-  await page.getByPlaceholder(/company legal name/i).fill('X')
-  await page.getByRole('button', { name: /resolve entity/i }).click()
-  await page.getByRole('button', { name: /Confirm/i }).click()
-  await page.getByRole('button', { name: /start scan/i }).click()
-  await expect(page.getByText(/No scan credits left/i)).toBeVisible()
+  await page.getByLabel(/company name or domain/i).fill('X')
+  await page.getByRole('button', { name: /scan/i }).click()
+  await expect(page.getByText(/no scan credits/i)).toBeVisible({ timeout: 10_000 })
 })

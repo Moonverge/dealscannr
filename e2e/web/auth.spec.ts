@@ -9,9 +9,9 @@ test('register and login flow', async ({ page }) => {
     })
   })
   await page.goto('/login')
-  await page.getByPlaceholder('email').fill('u@test.co')
-  await page.getByPlaceholder(/password/i).fill('password12345')
-  await page.getByRole('button', { name: 'Log in' }).click()
+  await page.getByLabel(/email/i).fill('u@test.co')
+  await page.getByLabel(/password/i).fill('password12345')
+  await page.getByRole('button', { name: /sign in/i }).click()
   await expect(page).toHaveURL(/\/dashboard/)
 })
 
