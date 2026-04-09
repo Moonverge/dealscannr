@@ -1,24 +1,28 @@
+"""Live web context fallback: async Firecrawl (scrape+search concurrent) → DuckDuckGo."""
+
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from rag.connectors.http_client import safe_get_sync, safe_post_sync
+from rag.connectors.http_client import safe_get, safe_post
+
+logger = logging.getLogger(__name__)
 
 FIRECRAWL_SEARCH = "https://api.firecrawl.dev/v2/search"
 FIRECRAWL_SCRAPE = "https://api.firecrawl.dev/v2/scrape"
 
 _HAS_SCHEME = re.compile(r"^https?://", re.I)
-# Single token that looks like a hostname + optional path (e.g. kooya.ph, www.x.com/about)
 _DOMAIN_LIKE = re.compile(
-    r"^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(/[^\s]*)?$",
-    re.I,
+    r"^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(/[^\s]*)?$", re.I,
 )
 
 
 def normalize_url_candidate(text: str) -> str | None:
-    """If the query is clearly a URL or bare domain, return a fetchable https URL."""
     s = (text or "").strip()
     if not s or " " in s:
         return None
@@ -29,20 +33,16 @@ def normalize_url_candidate(text: str) -> str | None:
     return None
 
 
-def _firecrawl_scrape_url(url: str, api_key: str) -> tuple[str, list[str]]:
-    body: dict[str, Any] = {
-        "url": url,
-        "formats": [{"type": "markdown"}],
-    }
+# ── async implementations ──────────────────────────────────────────────
+
+
+async def _firecrawl_scrape_async(url: str, api_key: str) -> tuple[str, list[str]]:
     try:
-        r = safe_post_sync(
+        r = await safe_post(
             FIRECRAWL_SCRAPE,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json=body,
-            timeout=90.0,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"url": url, "formats": [{"type": "markdown"}]},
+            timeout=45.0,
         )
         r.raise_for_status()
         payload = r.json()
@@ -50,15 +50,13 @@ def _firecrawl_scrape_url(url: str, api_key: str) -> tuple[str, list[str]]:
         return "", []
     if not payload.get("success"):
         return "", []
-    data = payload.get("data") or {}
-    md = (data.get("markdown") or "").strip()
+    md = ((payload.get("data") or {}).get("markdown") or "").strip()
     if not md:
         return "", []
-    block = f"DIRECT PAGE SCRAPE\nURL: {url}\n\n{md[:12000]}"
-    return block, [url]
+    return f"DIRECT PAGE SCRAPE\nURL: {url}\n\n{md[:12000]}", [url]
 
 
-def _firecrawl(company_name: str, api_key: str) -> tuple[str, list[str]]:
+async def _firecrawl_search_async(company_name: str, api_key: str) -> tuple[str, list[str]]:
     body: dict[str, Any] = {
         "query": f"{company_name} company startup funding",
         "limit": 5,
@@ -66,14 +64,11 @@ def _firecrawl(company_name: str, api_key: str) -> tuple[str, list[str]]:
         "scrapeOptions": {"formats": [{"type": "markdown"}]},
     }
     try:
-        r = safe_post_sync(
+        r = await safe_post(
             FIRECRAWL_SEARCH,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=body,
-            timeout=60.0,
+            timeout=30.0,
         )
         r.raise_for_status()
         payload = r.json()
@@ -81,8 +76,7 @@ def _firecrawl(company_name: str, api_key: str) -> tuple[str, list[str]]:
         return "", []
     if not payload.get("success"):
         return "", []
-    data = payload.get("data") or {}
-    web = data.get("web") or []
+    web = (payload.get("data") or {}).get("web") or []
     parts: list[str] = []
     urls: list[str] = []
     for item in web[:8]:
@@ -101,19 +95,14 @@ def _firecrawl(company_name: str, api_key: str) -> tuple[str, list[str]]:
     return "\n---\n".join(parts).strip(), urls
 
 
-def _duckduckgo(company_name: str) -> tuple[str, list[str]]:
+async def _duckduckgo_async(company_name: str) -> tuple[str, list[str]]:
     urls: list[str] = []
     parts: list[str] = []
     try:
-        r = safe_get_sync(
+        r = await safe_get(
             "https://api.duckduckgo.com/",
-            params={
-                "q": company_name,
-                "format": "json",
-                "no_html": 1,
-                "skip_disambig": 1,
-            },
-            timeout=20.0,
+            params={"q": company_name, "format": "json", "no_html": 1, "skip_disambig": 1},
+            timeout=12.0,
         )
         r.raise_for_status()
         data = r.json()
@@ -151,17 +140,43 @@ def _duckduckgo(company_name: str) -> tuple[str, list[str]]:
     return "\n---\n".join(parts).strip(), urls
 
 
-def fetch_live_context(
+async def _fetch_live_context_async(
     company_name: str,
     firecrawl_api_key: str | None,
 ) -> tuple[str, list[str]]:
     if firecrawl_api_key:
         direct = normalize_url_candidate(company_name)
         if direct:
-            text, urls = _firecrawl_scrape_url(direct, firecrawl_api_key)
+            results = await asyncio.gather(
+                _firecrawl_scrape_async(direct, firecrawl_api_key),
+                _firecrawl_search_async(company_name, firecrawl_api_key),
+                return_exceptions=True,
+            )
+            for res in results:
+                if isinstance(res, tuple) and res[0]:
+                    return res
+        else:
+            text, urls = await _firecrawl_search_async(company_name, firecrawl_api_key)
             if text:
                 return text, urls
-        text, urls = _firecrawl(company_name, firecrawl_api_key)
-        if text:
-            return text, urls
-    return _duckduckgo(company_name)
+    return await _duckduckgo_async(company_name)
+
+
+# ── sync wrapper (safe from any event-loop context) ────────────────────
+
+
+def fetch_live_context(
+    company_name: str,
+    firecrawl_api_key: str | None,
+) -> tuple[str, list[str]]:
+    """Sync entry point: runs async pipeline in a dedicated thread."""
+    with ThreadPoolExecutor(1) as pool:
+        future = pool.submit(
+            asyncio.run,
+            _fetch_live_context_async(company_name, firecrawl_api_key),
+        )
+        try:
+            return future.result(timeout=50)
+        except Exception as e:
+            logger.warning("live_context_failed: %s", e)
+            return "", []

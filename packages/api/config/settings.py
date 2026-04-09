@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     together_api_key: str | None = None
     nomic_api_key: str | None = None
     firecrawl_api_key: str | None = None
+    cohere_api_key: str | None = None
+    jina_api_key: str | None = None
     courtlistener_api_key: str | None = None
     github_token: str | None = None
     newsapi_key: str | None = None

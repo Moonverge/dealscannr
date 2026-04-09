@@ -49,7 +49,7 @@ class GitHubConnector(BaseConnector):
                 "https://api.github.com/search/users",
                 params={"q": q, "per_page": "8"},
                 headers=headers,
-                timeout=25.0,
+                timeout=10.0,
             )
             sr.raise_for_status()
             data = sr.json()
@@ -66,7 +66,7 @@ class GitHubConnector(BaseConnector):
                 "https://api.github.com/search/repositories",
                 params={"q": f"{domain} in:description", "sort": "stars", "per_page": "8"},
                 headers=headers,
-                timeout=25.0,
+                timeout=10.0,
             )
             rr.raise_for_status()
             data = rr.json()
@@ -113,7 +113,7 @@ class GitHubConnector(BaseConnector):
                 f"https://{dom}/",
                 entity_domain=dom,
                 headers=neutral_headers,
-                timeout=20.0,
+                timeout=10.0,
                 follow_redirects=True,
             )
             if r.status_code >= 400:
@@ -125,14 +125,14 @@ class GitHubConnector(BaseConnector):
 
     async def _verify_org(self, headers: dict[str, str], login: str) -> bool:
         try:
-            org_r = await safe_get(f"https://api.github.com/orgs/{login}", headers=headers, timeout=20.0)
+            org_r = await safe_get(f"https://api.github.com/orgs/{login}", headers=headers, timeout=10.0)
             return org_r.status_code == 200
         except Exception:
             return False
 
     async def _get_org_dict(self, headers: dict[str, str], login: str) -> dict[str, Any]:
         try:
-            org_r = await safe_get(f"https://api.github.com/orgs/{login}", headers=headers, timeout=20.0)
+            org_r = await safe_get(f"https://api.github.com/orgs/{login}", headers=headers, timeout=10.0)
             if org_r.status_code != 200:
                 return {}
             data = org_r.json()
@@ -232,9 +232,9 @@ class GitHubConnector(BaseConnector):
         repo: str,
     ) -> int | None:
         url = f"https://api.github.com/repos/{login}/{repo}/stats/commit_activity"
-        for _attempt in range(4):
+        for _attempt in range(2):
             try:
-                r = await safe_get(url, headers=headers, timeout=25.0)
+                r = await safe_get(url, headers=headers, timeout=10.0)
                 if r.status_code == 202:
                     await asyncio.sleep(1.0)
                     continue
@@ -323,7 +323,7 @@ class GitHubConnector(BaseConnector):
                 f"https://api.github.com/orgs/{login}/repos",
                 params={"sort": "pushed", "per_page": "10"},
                 headers=headers,
-                timeout=25.0,
+                timeout=10.0,
             )
             repos_r.raise_for_status()
             repos = repos_r.json() if isinstance(repos_r.json(), list) else []

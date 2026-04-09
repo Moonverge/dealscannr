@@ -11,7 +11,7 @@ This document is a **repeatable, end-to-end audit guide** for the DealScannr rep
 | Ingestion | `packages/ingestion` | CLI: public web snapshot → chunk → OpenAI embed → Qdrant upsert |
 | Web | `packages/web` | React 19, Vite, Tailwind, TanStack Query, Zustand |
 | E2E | `e2e/` | pytest (API), Playwright (web) |
-| Docs | repo root | `README.md`, `DEALSCANNR_*.md`, `TRACKER_TODO.md` |
+| Docs | `docs/` (root `README.md`) | `DEALSCANNR_*.md`, `CODEBASE_AUDIT.md`, `TECH_SPECS.md`, `TRACKER_TODO.md` |
 | Infra | `docker compose` (per README) | MongoDB, Redis, Qdrant |
 
 **Indexed RAG vs live RAG:** The **API request path** can use Qdrant + live context without running ingestion. The **ingestion path** is a separate operator/CI flow (`scripts/ingest.sh` / `python -m ingestion`) that **writes** vectors into Qdrant so retrieval returns `raw_chunks_count > 0` for a company. Auditors must treat these as **two halves of one system** (same collection / slug conventions, different trust and scheduling assumptions).
@@ -59,7 +59,7 @@ One person can wear multiple hats on a small team; still **split the checklist**
 
 1. **Executive summary** (1 page): product risk in plain language for non-engineers.
 2. **Findings register** (spreadsheet or table in Markdown): ID, severity, component, repro, fix, owner.
-3. **Architecture narrative**: updated diagram or text if reality drifted from `DEALSCANNR_ARCHITECTURE.md`.
+3. **Architecture narrative**: updated diagram or text if reality drifted from `docs/DEALSCANNR_ARCHITECTURE.md`.
 4. **Residual risk**: what you explicitly accept vs. what must be fixed before ship.
 
 ---
@@ -203,7 +203,7 @@ Ingestion is **not** the HTTP API; it is a **batch job** that populates Qdrant f
 - [ ] **Content provenance** — Ingested text is **untrusted** until proven otherwise; same prompt-injection surface as live context when later fed to the model.
 - [ ] **Data residency** — Embeddings API jurisdiction; Qdrant host region vs customer requirements.
 - [ ] **Idempotency** — Re-running ingestion for the same company: duplicate vectors vs delete-and-rebuild; GDPR “erasure” story for a company.
-- [ ] **Scheduling / freshness** — Architecture doc may describe Redis workers + scheduler (`TRACKER_TODO` Phase 5); if **not** implemented, flag **doc vs code** drift.
+- [ ] **Scheduling / freshness** — Architecture doc may describe Redis workers + scheduler (`docs/TRACKER_TODO.md` Phase 5); if **not** implemented, flag **doc vs code** drift.
 
 **Explain in the report:** prerequisites from README (Qdrant up, `OPENAI_API_KEY`, optional `FIRECRAWL_API_KEY`) and how operators verify success (`raw_chunks_count` after a new Scan).
 
@@ -349,7 +349,7 @@ Walk the call chain once top-to-bottom and record observations:
 5. **`upsert_chunks`** — point IDs are `uuid.uuid4()` each run: record implication for updates and deletion.
 6. **Post-check** — API search/report for same `company_id` shows non-zero chunk retrieval when expected.
 
-**Future architecture (from `DEALSCANNR_ARCHITECTURE.md` / tracker):** Redis queue, worker process, APScheduler — if absent in repo, list as **planned vs implemented** in the audit.
+**Future architecture (from `docs/DEALSCANNR_ARCHITECTURE.md` / tracker):** Redis queue, worker process, APScheduler — if absent in repo, list as **planned vs implemented** in the audit.
 
 ---
 
@@ -432,10 +432,10 @@ During the audit, **cross-check**:
 | Doc | Verify |
 |-----|--------|
 | `README.md` | Commands, ports, env still accurate |
-| `DEALSCANNR_ARCHITECTURE.md` | Diagram matches code (**ingestion worker / Redis / scheduler** vs current CLI-only `packages/ingestion`) |
-| `DEALSCANNR_PRODUCT.md` | Report sections match UI + API |
-| `DEALSCANNR_MASTER.md` | AI / human context not contradicted by implementation |
-| `TRACKER_TODO.md` | Phase completion vs. reality (optional but useful for honesty) |
+| `docs/DEALSCANNR_ARCHITECTURE.md` | Diagram matches code (**ingestion worker / Redis / scheduler** vs current CLI-only `packages/ingestion`) |
+| `docs/DEALSCANNR_PRODUCT.md` | Report sections match UI + API |
+| `docs/DEALSCANNR_MASTER.md` | AI / human context not contradicted by implementation |
+| `docs/TRACKER_TODO.md` | Phase completion vs. reality (optional but useful for honesty) |
 
 **Drift is a finding** (severity Info or Low) if it causes onboarding or wrong ops assumptions.
 

@@ -331,7 +331,7 @@ export function ScanReport({ guestMode }: ScanReportProps = {}) {
           </p>
         ) : null}
         <Link
-          to={isGuest ? '/try' : '/dashboard'}
+          to={isGuest ? '/' : '/dashboard'}
           className="mt-4 inline-block text-sm text-[var(--accent)] underline"
         >
           {isGuest ? 'Back to trial scan' : 'Dashboard'}
@@ -460,7 +460,7 @@ export function ScanReport({ guestMode }: ScanReportProps = {}) {
         <div className="flex flex-wrap justify-center gap-2">{actionRow}</div>
       </div>
 
-      <div className="mx-auto mt-6 max-w-3xl space-y-10">
+      <div className="mx-auto mt-10 max-w-3xl space-y-10">
         <section
           className="rounded-[var(--radius-xl)] border px-6 py-7 shadow-dsMd"
           style={{
@@ -682,7 +682,7 @@ export function ScanReport({ guestMode }: ScanReportProps = {}) {
 
         <div className="flex flex-wrap gap-6 pb-8 text-sm">
           {isGuest ? (
-            <Link to="/try" className="text-[var(--accent)] underline hover:text-[var(--accentHover)]">
+            <Link to="/" className="text-[var(--accent)] underline hover:text-[var(--accentHover)]">
               Trial scan
             </Link>
           ) : (

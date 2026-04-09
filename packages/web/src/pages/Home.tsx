@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Activity,
   ArrowRight,
@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/Card'
 import { VerdictBadge } from '@/components/ui/Badge'
 import { PublicLayout } from '@/components/layout/PublicLayout'
 import { FaqAccordion } from '@/components/marketing/FaqAccordion'
+import { GuestFirstScanPanel } from '@/components/try/GuestFirstScanPanel'
 import { useAuthStore } from '@/stores/authStore'
 
 const SAMPLE = [
@@ -46,6 +47,7 @@ const SAMPLE = [
 
 export function Home() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const token = useAuthStore((s) => s.token)
   const [heroQuery, setHeroQuery] = useState('')
   const [focused, setFocused] = useState(false)
@@ -54,15 +56,20 @@ export function Home() {
     document.title = 'DealScannr — Due diligence in 60 seconds'
   }, [])
 
+  useEffect(() => {
+    if (!token) return
+    const intent = searchParams.get('intent')
+    const company = searchParams.get('company')
+    if (company && intent === 'scan') {
+      navigate(`/dashboard?intent=scan&company=${encodeURIComponent(company)}`, { replace: true })
+    }
+  }, [token, searchParams, navigate])
+
   function onHeroSubmit(e: React.FormEvent) {
     e.preventDefault()
     const q = heroQuery.trim()
     if (!q) return
-    if (token) {
-      navigate(`/dashboard?intent=scan&company=${encodeURIComponent(q)}`)
-    } else {
-      navigate(`/try?intent=scan&company=${encodeURIComponent(q)}`)
-    }
+    navigate(`/dashboard?intent=scan&company=${encodeURIComponent(q)}`)
   }
 
   return (
@@ -78,32 +85,34 @@ export function Home() {
           meeting.
         </p>
 
-        <form
-          onSubmit={onHeroSubmit}
-          className="mt-10 w-full max-w-[560px]"
-        >
-          <div
-            className={`flex overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--surface)] shadow-dsSm transition-shadow ${
-              focused
-                ? 'border-[var(--accent)] shadow-[0_0_0_3px_var(--accentSoft)]'
-                : 'border-[var(--border)]'
-            }`}
-          >
-            <input
-              className="min-h-14 flex-1 border-0 bg-transparent px-4 text-[var(--text)] outline-none placeholder:text-[var(--textSubtle)]"
-              placeholder="Enter company name..."
-              value={heroQuery}
-              onChange={(e) => setHeroQuery(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              aria-label="Company name"
-            />
-            <Button type="submit" variant="primary" size="lg" className="shrink-0 rounded-none px-5">
-              Scan <ArrowRight className="h-4 w-4" aria-hidden />
-            </Button>
+        {token ? (
+          <form onSubmit={onHeroSubmit} className="mt-10 w-full max-w-[560px]">
+            <div
+              className={`flex overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--surface)] shadow-dsSm transition-shadow ${
+                focused
+                  ? 'border-[var(--accent)] shadow-[0_0_0_3px_var(--accentSoft)]'
+                  : 'border-[var(--border)]'
+              }`}
+            >
+              <input
+                className="min-h-14 flex-1 border-0 bg-transparent px-4 text-[var(--text)] outline-none placeholder:text-[var(--textSubtle)]"
+                placeholder="Enter company name..."
+                value={heroQuery}
+                onChange={(e) => setHeroQuery(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                aria-label="Company name"
+              />
+              <Button type="submit" variant="primary" size="lg" className="shrink-0 rounded-none px-5">
+                Scan <ArrowRight className="h-4 w-4" aria-hidden />
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div id="guest-first-scan" className="mt-10 w-full max-w-3xl">
+            <GuestFirstScanPanel embedded />
           </div>
-          <p className="mt-3 text-sm text-[var(--textSubtle)]">No account needed for your first scan</p>
-        </form>
+        )}
 
         <p className="mt-14 text-xs font-medium uppercase tracking-wider text-[var(--textSubtle)]">
           Trusted by investors at

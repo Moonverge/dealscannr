@@ -25,7 +25,7 @@ async def ddg_search_snippets(query: str, max_results: int = 8) -> list[str]:
                 "no_html": "1",
                 "skip_disambig": "1",
             },
-            timeout=20.0,
+            timeout=10.0,
         )
         r.raise_for_status()
         data = r.json()
@@ -52,7 +52,7 @@ async def bing_rss_entries(query: str, max_results: int = 8) -> list[dict[str, s
     """Parse Bing News RSS into {title, link, description, published}."""
     url = f"https://www.bing.com/news/search?q={quote_plus(query)}&format=rss"
     try:
-        r = await safe_get(url, timeout=22.0, follow_redirects=True)
+        r = await safe_get(url, timeout=10.0, follow_redirects=True)
         r.raise_for_status()
         feed = feedparser.parse(r.text)
     except Exception as e:

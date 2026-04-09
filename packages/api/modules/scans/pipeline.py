@@ -231,16 +231,49 @@ async def run_scan_pipeline(
         ]
     )
 
-    results = await asyncio.gather(
-        *[
-            _run_connector_with_db_updates(db, scan_id, c, entity_id, legal_name, domain)
-            for c in connectors
-        ]
-    )
+    CONNECTOR_PHASE_TIMEOUT = 45
+    try:
+        results = await asyncio.wait_for(
+            asyncio.gather(
+                *[
+                    _run_connector_with_db_updates(db, scan_id, c, entity_id, legal_name, domain)
+                    for c in connectors
+                ]
+            ),
+            timeout=CONNECTOR_PHASE_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("connector_phase_timeout scan_id=%s cap=%ds", scan_id, CONNECTOR_PHASE_TIMEOUT)
+        runs = await db.connector_runs.find({"scan_id": scan_id}).to_list(50)
+        results = []
+        for c in connectors:
+            run = next((r for r in runs if r["connector_name"] == c.connector_id), None)
+            if run and run.get("status") in ("complete", "partial"):
+                results.append(
+                    ConnectorResult(
+                        connector_id=c.connector_id,
+                        chunks=[],
+                        status=run["status"],
+                        retrieved_at=datetime.now(timezone.utc),
+                        error=run.get("error"),
+                        lane=c.lane,
+                    )
+                )
+            else:
+                if run and run.get("status") == "running":
+                    await db.connector_runs.update_one(
+                        {"scan_id": scan_id, "connector_name": c.connector_id},
+                        {"$set": {"status": "failed", "error": "deadline_exceeded", "updated_at": datetime.now(timezone.utc)}},
+                    )
+                results.append(c.empty_result("deadline_exceeded"))
 
     all_raw: list[RawChunk] = []
     for r in results:
         all_raw.extend(r.chunks)
+
+    from rag.pipeline.chunker import apply_semantic_chunking
+
+    all_raw = apply_semantic_chunking(all_raw)
 
     vdim = embedding_vector_dim(
         app_settings.openai_api_key,
@@ -371,6 +404,12 @@ async def run_scan_pipeline(
         except Exception as e:
             logger.error("scan_qdrant_upsert_failed: %s", e)
 
+    if points and app_settings.qdrant_url:
+        await asyncio.sleep(0.5)
+
+    scan_doc = await db.scans.find_one({"_id": oid}, {"created_at": 1})
+    scan_created_at = scan_doc.get("created_at") if scan_doc else None
+
     lanes = lane_coverage_from_results(list(results))
     engine = RAGEngine(
         groq_api_key=app_settings.groq_api_key,
@@ -394,12 +433,15 @@ async def run_scan_pipeline(
             )
             hallu = 0
         else:
-            report, hallu, llm_usage = engine.run(
-                legal_name,
-                scan_id=scan_id,
-                entity_id=entity_id,
-                allow_live_fallback=allow_live,
-                mongo_evidence_hits=mongo_evidence_hits,
+            report, hallu, llm_usage = await asyncio.to_thread(
+                lambda: engine.run(
+                    legal_name,
+                    scan_id=scan_id,
+                    entity_id=entity_id,
+                    allow_live_fallback=allow_live,
+                    mongo_evidence_hits=mongo_evidence_hits,
+                    scan_created_at=scan_created_at,
+                )
             )
             chunk_out = (
                 report.chunk_count

@@ -26,10 +26,12 @@ dealscannr/
 ├── infra/            # qdrant, redis, mongo configs
 ├── e2e/              # E2E tests: API (pytest) + Web (Playwright)
 ├── docker-compose.yml
-├── DEALSCANNR_PRODUCT.md
-├── DEALSCANNR_ARCHITECTURE.md
-├── DEALSCANNR_MASTER.md   # this file
-└── TRACKER_TODO.md
+├── README.md
+└── docs/
+    ├── DEALSCANNR_PRODUCT.md
+    ├── DEALSCANNR_ARCHITECTURE.md
+    ├── DEALSCANNR_MASTER.md   # this file
+    └── TRACKER_TODO.md
 ```
 
 ---
@@ -118,7 +120,7 @@ VITE_API_URL=http://localhost:5200
 
 - **API E2E:** `e2e/api/` — pytest, httpx (or FastAPI TestClient). Cover: `GET /health`, `POST /api/search` (minimal payload), optionally `GET /api/reports/:id` and `GET /api/companies/:slug`.
 - **Web E2E:** `e2e/web/` — Playwright. Cover: load home, submit company search, (when implemented) view report page.
-- **Run:** API tests against a running API (or in-docker); Web tests against a running dev build or served app. See `e2e/README.md` and TRACKER_TODO.md.
+- **Run:** API tests against a running API (or in-docker); Web tests against a running dev build or served app. See `e2e/README.md` and `docs/TRACKER_TODO.md`.
 
 ---
 
@@ -129,7 +131,7 @@ VITE_API_URL=http://localhost:5200
 - Follow **frontend architecture** from user rules: `pages/`, `components/`, `hooks/`, `stores/`, `utils/api.routes.ts`, `utils/axios.instance.ts`, types in `types/`.
 - Use **GROQ** and **GROQ_API_KEY** only for LLM; do not introduce Claude/Anthropic.
 - When adding RAG prompts or schema, keep synthesis and scoring prompts in `packages/rag/prompts/` and schema in `packages/rag/schema/`.
-- Before changing ports, collection names, or TTLs, update this master doc and TRACKER_TODO.md if tasks are affected.
+- Before changing ports, collection names, or TTLs, update this master doc and `docs/TRACKER_TODO.md` if tasks are affected.
 
 ---
 

@@ -118,7 +118,7 @@ async def _efts_search(
             EFTS_URL,
             params=params,
             headers=headers,
-            timeout=25.0,
+            timeout=10.0,
             follow_redirects=True,
         )
         r.raise_for_status()
@@ -243,7 +243,7 @@ async def _fetch_item_1a_risk_factors(src: dict[str, Any], headers: dict[str, st
     nodash = adsh.replace("-", "")
     index_url = f"https://www.sec.gov/Archives/edgar/data/{cik_seg}/{nodash}/{adsh}-index.json"
     try:
-        r = await safe_get(index_url, headers=headers, timeout=30.0, follow_redirects=True)
+        r = await safe_get(index_url, headers=headers, timeout=10.0, follow_redirects=True)
         if r.status_code != 200:
             return None
         data = r.json()
@@ -256,7 +256,7 @@ async def _fetch_item_1a_risk_factors(src: dict[str, Any], headers: dict[str, st
         return None
     doc_url = f"https://www.sec.gov/Archives/edgar/data/{cik_seg}/{nodash}/{primary}"
     try:
-        r2 = await safe_get(doc_url, headers=headers, timeout=45.0, follow_redirects=True)
+        r2 = await safe_get(doc_url, headers=headers, timeout=12.0, follow_redirects=True)
         if r2.status_code != 200:
             return None
         return _extract_item_1a_text(r2.text, max_chars=3000)

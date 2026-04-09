@@ -62,6 +62,8 @@ scripts/        Dev helpers
 - Auth: JWT
 - Billing: Stripe
 
+**Further documentation:** product, architecture, audit playbook, tech specs, and tracker live under [`docs/`](docs/) (start with [`docs/DEALSCANNR_MASTER.md`](docs/DEALSCANNR_MASTER.md)).
+
 **Connectors (high level)**
 
 - SEC EDGAR, CourtListener, GitHub, hiring (e.g. Remotive / Adzuna), news (e.g. GDELT / RSS / DuckDuckGo), Wikipedia, Clearbit autocomplete (via API proxy for entity UX).

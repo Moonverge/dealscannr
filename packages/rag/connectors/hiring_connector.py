@@ -63,7 +63,7 @@ class HiringConnector(BaseConnector):
             r = await safe_get(
                 REMOTIVE_JOBS,
                 params={"search": legal_name, "limit": "50"},
-                timeout=28.0,
+                timeout=10.0,
                 headers={"User-Agent": "DealScannr-Connector/1.0 (+https://dealscannr.com)"},
             )
             r.raise_for_status()
@@ -125,7 +125,7 @@ class HiringConnector(BaseConnector):
                     "what": legal_name,
                     "results_per_page": "10",
                 },
-                timeout=25.0,
+                timeout=10.0,
             )
             r.raise_for_status()
             data = r.json()
@@ -215,7 +215,7 @@ class HiringConnector(BaseConnector):
                 r = await safe_get(
                     u,
                     entity_domain=dom,
-                    timeout=18.0,
+                    timeout=10.0,
                     follow_redirects=True,
                     headers={"User-Agent": "DealScannr-Connector/1.0"},
                 )

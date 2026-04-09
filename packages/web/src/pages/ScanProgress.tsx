@@ -126,7 +126,7 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
     if (!data?.lanes) return 0
     return LANES.filter((l) => {
       const s = data.lanes[l]?.status
-      return s === 'complete' || s === 'partial'
+      return s === 'complete' || s === 'partial' || s === 'failed'
     }).length
   }, [data?.lanes])
 
@@ -142,9 +142,12 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
     return Math.min(96, Math.round(laneUnit * 1000) / 10)
   }, [completedLanes, runningLanes, data?.lanes, data?.status])
 
-  function laneStatusText(lane: (typeof LANES)[number], status: string) {
+  function laneStatusText(lane: (typeof LANES)[number], status: string, error?: string | null) {
     if (status === 'complete') return { text: 'Complete', className: 'text-[var(--green)]' }
-    if (status === 'failed') return { text: 'No data', className: 'text-[var(--red)]' }
+    if (status === 'failed') {
+      const label = error || 'Source unavailable'
+      return { text: label, className: 'text-[var(--textMuted)]' }
+    }
     if (status === 'partial') return { text: 'Partial data', className: 'text-[var(--yellow)]' }
     if (status === 'running') return { text: LANE_META[lane].searching, className: 'text-[var(--textMuted)]' }
     return { text: 'Queued', className: 'text-[var(--textSubtle)]' }
@@ -191,7 +194,7 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
           const row = data?.lanes?.[lane]
           const st = row?.status ?? 'queued'
           const laneInfo = LANE_META[lane]
-          const { text, className } = laneStatusText(lane, st)
+          const { text, className } = laneStatusText(lane, st, row?.error)
           const chunks = row?.chunk_count ?? 0
           const flash = flashed[lane]
           return (
@@ -205,14 +208,11 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
                 <StatusDot status={st} />
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex min-w-0 flex-col gap-0.5">
+                  <div className="flex min-w-0 flex-col gap-0.5">
                   <div className="flex items-center gap-2">
                     {laneInfo.icon}
                     <span className="text-sm font-medium capitalize text-[var(--text)]">{laneInfo.label}</span>
                   </div>
-                  {st === 'failed' && row?.error ? (
-                    <span className="text-[11px] text-[var(--textMuted)]">{row.error}</span>
-                  ) : null}
                 </div>
                 <p className={`text-xs sm:text-right ${className}`}>{text}</p>
               </div>
@@ -224,7 +224,7 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
         })}
       </ul>
 
-      <p className="mt-8 text-center text-sm text-[var(--textMuted)]">This usually takes 30–60 seconds</p>
+      <p className="mt-8 text-center text-sm text-[var(--textMuted)]">Results typically ready in under 60 seconds</p>
       <div
         className="ds-scan-progress-track mt-4 ring-1 ring-[var(--border)] ring-inset"
         role="progressbar"
@@ -240,7 +240,7 @@ export function ScanProgress({ guestMode }: ScanProgressProps = {}) {
       </div>
 
       <div className="mt-8 text-center">
-        <Link to={isGuest ? '/try' : '/dashboard'}>
+        <Link to={isGuest ? '/' : '/dashboard'}>
           <Button variant="ghost" size="md">
             {isGuest ? 'Cancel — back to trial scan' : 'Cancel — back to dashboard'}
           </Button>

@@ -1,4 +1,30 @@
+from typing import Literal
+
 from rag.prompts.grounding_contract import SCORING_GROUNDING_RULES, UNIVERSAL_LLM_RULES
+
+VERDICT_LEVEL: dict[str, int] = {"INSUFFICIENT": 0, "PASS": 1, "MEET": 2, "FLAG": 3}
+SCORING_TO_SYNTHESIS: dict[str, str] = {"green": "MEET", "yellow": "PASS", "red": "FLAG"}
+
+
+def reconcile_verdicts(
+    synthesis_verdict: str,
+    scoring_verdict_raw: str,
+    synthesis_confidence: float,
+    scoring_confidence: float,
+) -> tuple[str, float, bool]:
+    """Compare synthesis verdict with scoring verdict.
+
+    Returns (final_verdict, final_confidence, needs_review).
+    If they conflict by 2+ levels, flag needs_review and pick the lower-confidence verdict.
+    """
+    mapped = SCORING_TO_SYNTHESIS.get(scoring_verdict_raw, "PASS")
+    sv = VERDICT_LEVEL.get(synthesis_verdict, 1)
+    scv = VERDICT_LEVEL.get(mapped, 1)
+
+    if abs(sv - scv) >= 2:
+        lower = mapped if scv < sv else synthesis_verdict
+        return lower, min(synthesis_confidence, scoring_confidence), True
+    return synthesis_verdict, synthesis_confidence, False
 
 
 def scoring_prompt(

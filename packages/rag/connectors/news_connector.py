@@ -53,7 +53,6 @@ class NewsConnector(BaseConnector):
             return []
         logger.info("gdelt_query_built query=%r", q)
         try:
-            await asyncio.sleep(2.0)
             r = await safe_get(
                 GDELT_DOC,
                 params={
@@ -63,7 +62,7 @@ class NewsConnector(BaseConnector):
                     "format": "json",
                     "timespan": "30d",
                 },
-                timeout=28.0,
+                timeout=10.0,
             )
             r.raise_for_status()
             if not r.text.strip().startswith("{"):
@@ -205,7 +204,7 @@ class NewsConnector(BaseConnector):
                     "from": from_day,
                     "apiKey": key,
                 },
-                timeout=25.0,
+                timeout=10.0,
             )
             if r.status_code == 426:
                 logger.warning("newsapi_upgrade_required_free_tier_blocks_everything_endpoint")

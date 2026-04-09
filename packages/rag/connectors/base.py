@@ -39,7 +39,7 @@ class ConnectorResult:
 class BaseConnector(ABC):
     connector_id: str
     lane: str
-    timeout_seconds: int = 30
+    timeout_seconds: int = 15
 
     def __init__(self, settings: ConnectorSettings | None = None):
         self.settings = settings or ConnectorSettings()
@@ -87,7 +87,7 @@ class BaseConnector(ABC):
         legal_name: str,
         domain: str,
         *,
-        max_retries: int = 2,
+        max_retries: int = 1,
     ) -> ConnectorResult:
         last_error: str | None = None
         for attempt in range(max_retries + 1):
@@ -96,8 +96,8 @@ class BaseConnector(ABC):
                 return result
             last_error = result.error or "failed"
             if attempt < max_retries:
-                await asyncio.sleep(2**attempt)
-        return self.empty_result(f"failed after {max_retries + 1} attempts: {last_error}")
+                await asyncio.sleep(1)
+        return self.empty_result(f"source_unavailable:{last_error}")
 
     def empty_result(self, error: str) -> ConnectorResult:
         return ConnectorResult(

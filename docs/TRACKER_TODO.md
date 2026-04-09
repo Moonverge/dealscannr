@@ -10,10 +10,10 @@
 
 | ID   | Task | Status |
 |------|------|--------|
-| 0.1  | Product doc (DEALSCANNR_PRODUCT.md) | [x] |
-| 0.2  | Architecture doc (DEALSCANNR_ARCHITECTURE.md) | [x] |
-| 0.3  | Master prompt / AI context (DEALSCANNR_MASTER.md) | [x] |
-| 0.4  | Tracker (TRACKER_TODO.md) | [x] |
+| 0.1  | Product doc (`docs/DEALSCANNR_PRODUCT.md`) | [x] |
+| 0.2  | Architecture doc (`docs/DEALSCANNR_ARCHITECTURE.md`) | [x] |
+| 0.3  | Master prompt / AI context (`docs/DEALSCANNR_MASTER.md`) | [x] |
+| 0.4  | Tracker (`docs/TRACKER_TODO.md`) | [x] |
 | 0.5  | E2E scaffold (e2e/ + API + Web) | [x] |
 | 0.6  | .env.example with GROQ_API_KEY | [x] |
 

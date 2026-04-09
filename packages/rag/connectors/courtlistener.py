@@ -195,7 +195,7 @@ class CourtListenerConnector(BaseConnector):
             got: list[dict] = []
             for base in (CL_SEARCH_V4, CL_SEARCH_V3):
                 try:
-                    r = await safe_get(base, params=params, headers=headers, timeout=25.0)
+                    r = await safe_get(base, params=params, headers=headers, timeout=10.0)
                     if r.status_code == 404:
                         continue
                     r.raise_for_status()

@@ -51,7 +51,7 @@ export function StatusDot({ status }: { status: string }) {
     )
   if (status === 'failed')
     return (
-      <span className={cn(base, 'bg-[var(--red)]')} aria-label="Failed" title="Failed" />
+      <span className={cn(base, 'bg-[var(--textSubtle)]')} aria-label="Unavailable" title="Source unavailable" />
     )
   if (status === 'partial')
     return (

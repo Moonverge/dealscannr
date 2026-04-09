@@ -12,6 +12,13 @@ const LANES = [
 
 const LANE_DONE_AT = [52, 64, 76, 88];
 
+const REPORT_LANES = [
+  { icon: "⚖", label: "Litigation", status: "Complete", signals: 5, tone: theme.green },
+  { icon: "⚙", label: "Engineering", status: "Complete", signals: 5, tone: theme.green },
+  { icon: "👥", label: "Hiring", status: "Partial", signals: 3, tone: theme.yellow },
+  { icon: "📰", label: "News", status: "Complete", signals: 5, tone: theme.green },
+] as const;
+
 export function ProductMoment() {
   const frame = useCurrentFrame();
 
@@ -82,14 +89,30 @@ export function ProductMoment() {
   const elSec = Math.max(0, Math.floor((frame - 42) * 0.7));
   const elStr = `${Math.floor(elSec / 60)}:${String(elSec % 60).padStart(2, "0")}`;
 
-  const verdictS = spring({
-    frame: frame - 118,
-    fps: 30,
-    config: { damping: 14, mass: 0.35, stiffness: 260 },
+  // Phase 3 springs
+  const verdictS = spring({ frame: frame - 116, fps: 30, config: { damping: 14, mass: 0.35, stiffness: 260 } });
+  const riskS = spring({ frame: frame - 120, fps: 30, config: SNAP });
+  const actionS = spring({ frame: frame - 118, fps: 30, config: SNAP });
+  const signalOverS = spring({ frame: frame - 126, fps: 30, config: SNAP });
+  const confidenceS = spring({ frame: frame - 132, fps: 30, config: SNAP });
+  const execS = spring({ frame: frame - 138, fps: 30, config: SNAP });
+  const probeS = spring({ frame: frame - 146, fps: 30, config: SNAP });
+
+  const scrollY = interpolate(frame, [155, 185], [0, -340], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
   });
-  const riskS = spring({ frame: frame - 124, fps: 30, config: SNAP });
-  const execS = spring({ frame: frame - 135, fps: 30, config: SNAP });
-  const probeS = spring({ frame: frame - 150, fps: 30, config: SNAP });
+
+  const laneCards = REPORT_LANES.map((_, i) =>
+    spring({ frame: frame - (162 + i * 3), fps: 30, config: SNAP }),
+  );
+  const unknownsS = spring({ frame: frame - 178, fps: 30, config: SNAP });
+  const disclaimerS = interpolate(frame, [186, 196], [0, 1], { extrapolateRight: "clamp" });
+
+  const confidencePct = interpolate(frame, [134, 150], [0, 72], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
   const noShrink: React.CSSProperties = { flexShrink: 0 };
 
@@ -209,7 +232,7 @@ export function ProductMoment() {
             backgroundColor: theme.canvas,
           }}
         >
-          {/* Phase 1 — Landing page */}
+          {/* ▸ Phase 1 — Landing page */}
           <div style={{ position: "absolute", inset: 0, opacity: p1 }}>
             <div
               style={{
@@ -348,7 +371,6 @@ export function ProductMoment() {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
                     padding: "0 18px",
                     backgroundColor: theme.accent,
                     color: "#fff",
@@ -373,7 +395,7 @@ export function ProductMoment() {
             </div>
           </div>
 
-          {/* Phase 2 — Scan progress */}
+          {/* ▸ Phase 2 — Scan progress */}
           <div
             style={{
               position: "absolute",
@@ -536,121 +558,315 @@ export function ProductMoment() {
             </div>
           </div>
 
-          {/* Phase 3 — Report */}
+          {/* ▸ Phase 3 — Full report with scroll */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               opacity: p3,
-              display: "flex",
-              justifyContent: "center",
               overflow: "hidden",
             }}
           >
-            <div style={{ width: 840, padding: "20px 0" }}>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.14em",
-                  color: theme.subtle,
-                  fontFamily: theme.fontSans,
-                }}
-              >
-                Intelligence report
-              </p>
-              <div
-                style={{
-                  marginTop: 4,
-                  fontSize: 26,
-                  fontWeight: 600,
-                  letterSpacing: "-0.02em",
-                  color: theme.text,
-                  fontFamily: theme.fontDisplay,
-                }}
-              >
-                Atlassian
-              </div>
-              <p
-                style={{
-                  marginTop: 2,
-                  fontSize: 12,
-                  fontFamily: theme.fontMono,
-                  color: theme.muted,
-                }}
-              >
-                atlassian.com
-              </p>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                transform: `translateY(${scrollY}px)`,
+              }}
+            >
+              <div style={{ width: 760, padding: "18px 0 40px" }}>
+                {/* Header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <p
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.14em",
+                        color: theme.subtle,
+                        fontFamily: theme.fontSans,
+                      }}
+                    >
+                      Intelligence report
+                    </p>
+                    <div
+                      style={{
+                        marginTop: 3,
+                        fontSize: 24,
+                        fontWeight: 600,
+                        letterSpacing: "-0.02em",
+                        color: theme.text,
+                        fontFamily: theme.fontDisplay,
+                      }}
+                    >
+                      Atlassian
+                    </div>
+                    <p
+                      style={{
+                        marginTop: 1,
+                        fontSize: 12,
+                        fontFamily: theme.fontMono,
+                        color: theme.muted,
+                      }}
+                    >
+                      atlassian.com
+                    </p>
+                  </div>
 
-              {/* Badges */}
-              <div
-                style={{
-                  marginTop: 10,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 8,
-                }}
-              >
-                <span
+                  {/* Action buttons */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      opacity: actionS,
+                      marginTop: 16,
+                    }}
+                  >
+                    {["↻ Rescan", "↓ Export PDF", "⤴ Share"].map((label) => (
+                      <div
+                        key={label}
+                        style={{
+                          padding: "5px 12px",
+                          borderRadius: theme.radiusMd,
+                          border: `1px solid ${theme.border}`,
+                          backgroundColor: theme.surface,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: theme.muted,
+                          fontFamily: theme.fontSans,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Badges row */}
+                <div
                   style={{
-                    padding: "4px 12px",
-                    borderRadius: 999,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "#fff",
-                    backgroundColor: theme.yellow,
-                    fontFamily: theme.fontSans,
-                    opacity: verdictS,
-                    transform: `scale(${interpolate(verdictS, [0, 1], [1.2, 1])})`,
+                    marginTop: 10,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 7,
+                    alignItems: "center",
                   }}
                 >
-                  PASS
-                </span>
-                <span
+                  <span
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 999,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#fff",
+                      backgroundColor: theme.yellow,
+                      fontFamily: theme.fontSans,
+                      opacity: verdictS,
+                      transform: `scale(${interpolate(verdictS, [0, 1], [1.2, 1])})`,
+                    }}
+                  >
+                    PASS
+                  </span>
+                  <span
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 500,
+                      color: theme.text,
+                      border: `1px solid ${theme.yellow}`,
+                      backgroundColor: theme.surface2,
+                      fontFamily: theme.fontSans,
+                      opacity: riskS,
+                    }}
+                  >
+                    Risk: Signals worth monitoring
+                  </span>
+                  <span
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      fontSize: 10,
+                      color: theme.muted,
+                      backgroundColor: theme.surface,
+                      fontFamily: theme.fontSans,
+                      opacity: riskS,
+                      boxShadow: theme.shadowSm,
+                    }}
+                  >
+                    4/4 lanes · 18 chunks
+                  </span>
+                </div>
+
+                {/* Signal overview card */}
+                <div
                   style={{
-                    padding: "4px 12px",
-                    borderRadius: 999,
-                    fontSize: 11,
-                    fontWeight: 500,
-                    color: theme.text,
-                    border: `1px solid ${theme.yellow}`,
-                    backgroundColor: theme.surface2,
-                    fontFamily: theme.fontSans,
-                    opacity: riskS,
+                    marginTop: 12,
+                    padding: "14px 16px",
+                    borderRadius: theme.radiusXl,
+                    border: `1px solid rgba(210,153,34,0.3)`,
+                    backgroundColor: theme.yellowSoft,
+                    boxShadow: theme.shadowMd,
+                    opacity: signalOverS,
+                    transform: `translateY(${interpolate(signalOverS, [0, 1], [8, 0])}px)`,
                   }}
                 >
-                  Risk: Signals worth monitoring
-                </span>
-                <span
+                  <p
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.14em",
+                      color: theme.subtle,
+                      fontFamily: theme.fontSans,
+                    }}
+                  >
+                    Signal overview
+                  </p>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        padding: "3px 10px",
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#fff",
+                        backgroundColor: theme.yellow,
+                        fontFamily: theme.fontSans,
+                      }}
+                    >
+                      PASS
+                    </span>
+                    <span
+                      style={{
+                        padding: "3px 10px",
+                        borderRadius: 999,
+                        fontSize: 10,
+                        fontWeight: 500,
+                        color: theme.text,
+                        border: `1px solid ${theme.yellow}`,
+                        backgroundColor: theme.surface2,
+                        fontFamily: theme.fontSans,
+                      }}
+                    >
+                      Signals worth monitoring
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      lineHeight: 1.5,
+                      color: theme.muted,
+                      fontFamily: theme.fontSans,
+                    }}
+                  >
+                    Based on 18 evidence chunks · 4 of 4 signal lanes returned usable text
+                  </p>
+                  {/* Per-lane signal chips */}
+                  <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {[
+                      { icon: "⚖", label: "Litigation", n: 5 },
+                      { icon: "⚙", label: "Engineering", n: 5 },
+                      { icon: "👥", label: "Hiring", n: 4 },
+                      { icon: "📰", label: "News", n: 4 },
+                    ].map((chip) => (
+                      <span
+                        key={chip.label}
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          border: `1px solid ${theme.border}`,
+                          backgroundColor: theme.surface,
+                          fontSize: 11,
+                          color: theme.text,
+                          fontFamily: theme.fontSans,
+                        }}
+                      >
+                        {chip.icon} {chip.label}: ~{chip.n} signals
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Confidence bar */}
+                <div
                   style={{
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    fontSize: 11,
-                    color: theme.muted,
+                    marginTop: 10,
+                    padding: "12px 16px",
+                    borderRadius: theme.radiusLg,
+                    border: `1px solid ${theme.border}`,
                     backgroundColor: theme.surface,
-                    fontFamily: theme.fontSans,
-                    opacity: riskS,
                     boxShadow: theme.shadowSm,
+                    opacity: confidenceS,
+                    transform: `translateY(${interpolate(confidenceS, [0, 1], [6, 0])}px)`,
                   }}
                 >
-                  4/4 lanes · 18 chunks
-                </span>
-              </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <p
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.14em",
+                        color: theme.subtle,
+                        fontFamily: theme.fontSans,
+                      }}
+                    >
+                      Model confidence
+                    </p>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: theme.accent,
+                        fontFamily: theme.fontMono,
+                      }}
+                    >
+                      {Math.round(confidencePct)}%
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      height: 6,
+                      borderRadius: 999,
+                      backgroundColor: theme.surface3,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        borderRadius: 999,
+                        width: `${confidencePct}%`,
+                        backgroundColor: theme.accent,
+                        boxShadow: `0 0 8px rgba(61,212,192,0.2)`,
+                      }}
+                    />
+                  </div>
+                </div>
 
-              {/* Cards row */}
-              <div style={{ display: "flex", gap: 14, marginTop: 14 }}>
                 {/* Executive readout */}
                 <div
                   style={{
-                    flex: 1,
+                    marginTop: 10,
                     padding: "14px 16px",
                     borderRadius: theme.radiusXl,
-                    border: "1px solid rgba(217,119,6,0.35)",
-                    backgroundColor: theme.yellowSoft,
+                    border: `1px solid ${theme.border}`,
+                    backgroundColor: theme.surface,
                     boxShadow: theme.shadowMd,
                     opacity: execS,
-                    transform: `translateY(${interpolate(execS, [0, 1], [10, 0])}px)`,
+                    transform: `translateY(${interpolate(execS, [0, 1], [8, 0])}px)`,
                   }}
                 >
                   <p
@@ -668,14 +884,15 @@ export function ProductMoment() {
                   <p
                     style={{
                       marginTop: 6,
-                      fontSize: 14,
-                      lineHeight: 1.65,
+                      fontSize: 13,
+                      lineHeight: 1.7,
                       color: theme.text,
                       fontFamily: theme.fontSans,
                     }}
                   >
                     Atlassian is publicly traded (NASDAQ: TEAM) with stable
-                    engineering velocity. No active federal litigation flagged.{" "}
+                    engineering velocity. No active federal litigation flagged.
+                    Hiring velocity flat QoQ — consistent with post-layoff stabilization.{" "}
                     <span
                       style={{
                         fontFamily: theme.fontMono,
@@ -683,15 +900,15 @@ export function ProductMoment() {
                         color: theme.accent,
                       }}
                     >
-                      [1][2]
+                      [1][2][3]
                     </span>
                   </p>
                 </div>
 
-                {/* Probes */}
+                {/* Probes card */}
                 <div
                   style={{
-                    flex: 1,
+                    marginTop: 10,
                     padding: "14px 16px",
                     borderRadius: theme.radiusLg,
                     border: `1px solid ${theme.border}`,
@@ -724,7 +941,7 @@ export function ProductMoment() {
                         display: "flex",
                         gap: 6,
                         marginTop: i > 0 ? 4 : 0,
-                        fontSize: 13,
+                        fontSize: 12,
                         lineHeight: 1.5,
                         color: theme.text,
                         fontFamily: theme.fontSans,
@@ -734,6 +951,134 @@ export function ProductMoment() {
                       {q}
                     </div>
                   ))}
+                </div>
+
+                {/* Lane section cards (collapsed) */}
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {REPORT_LANES.map((lane, i) => (
+                    <div
+                      key={lane.label}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 14px",
+                        borderRadius: theme.radiusLg,
+                        border: `1px solid ${theme.border}`,
+                        backgroundColor: theme.surface,
+                        boxShadow: theme.shadowSm,
+                        opacity: laneCards[i],
+                        transform: `translateY(${interpolate(laneCards[i], [0, 1], [6, 0])}px)`,
+                      }}
+                    >
+                      <span style={{ fontSize: 10, color: theme.muted, transform: "rotate(-90deg)" }}>▸</span>
+                      <span style={{ fontSize: 14 }}>{lane.icon}</span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: theme.text,
+                          fontFamily: theme.fontDisplay,
+                          flex: 1,
+                        }}
+                      >
+                        {lane.label}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: lane.tone,
+                          fontFamily: theme.fontSans,
+                        }}
+                      >
+                        {lane.status}
+                      </span>
+                      <span
+                        style={{
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          backgroundColor: theme.surface2,
+                          fontSize: 10,
+                          color: theme.muted,
+                          fontFamily: theme.fontMono,
+                        }}
+                      >
+                        {lane.signals} signals
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Known unknowns */}
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: "12px 16px",
+                    borderRadius: theme.radiusLg,
+                    borderLeft: `4px solid ${theme.yellow}`,
+                    border: `1px solid ${theme.noticeBorder}`,
+                    borderLeftWidth: 4,
+                    backgroundColor: theme.yellowSoft,
+                    boxShadow: theme.shadowSm,
+                    opacity: unknownsS,
+                    transform: `translateY(${interpolate(unknownsS, [0, 1], [6, 0])}px)`,
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: theme.yellow,
+                      fontFamily: theme.fontDisplay,
+                    }}
+                  >
+                    What we couldn&apos;t find
+                  </p>
+                  {[
+                    "No OSHA workplace safety complaints surfaced",
+                    "Private market valuation data not available",
+                    "Pre-IPO cap table details not indexed",
+                  ].map((item, i) => (
+                    <div
+                      key={item}
+                      style={{
+                        marginTop: i === 0 ? 6 : 3,
+                        fontSize: 11,
+                        lineHeight: 1.5,
+                        color: theme.muted,
+                        fontFamily: theme.fontSans,
+                        display: "flex",
+                        gap: 6,
+                      }}
+                    >
+                      <span style={{ color: theme.yellow }}>•</span>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Disclaimer */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: "10px 14px",
+                    borderRadius: theme.radiusMd,
+                    border: `1px solid ${theme.border}`,
+                    backgroundColor: `${theme.surface}99`,
+                    opacity: disclaimerS,
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: 10,
+                      lineHeight: 1.5,
+                      color: theme.subtle,
+                      fontFamily: theme.fontSans,
+                    }}
+                  >
+                    AI-generated report based on automated evidence retrieval. Citations link to source captures but do not constitute legal, financial, or investment advice. Verify all claims against primary sources before acting.
+                  </p>
                 </div>
               </div>
             </div>
