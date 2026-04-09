@@ -29,16 +29,16 @@ jobs:
           --health-timeout 3s
           --health-retries 5
       qdrant:
-        image: qdrant/qdrant:latest
+        image: qdrant/qdrant:v1.12.6
         ports:
           - 5500:6333
           - 5501:6334
         options: >-
-          --health-cmd "bash -c 'printf \"GET /healthz HTTP/1.0\r\n\r\n\" | nc -w 2 localhost 6333 | grep -q 200'"
-          --health-interval 10s
+          --health-cmd "timeout 2 bash -c '</dev/tcp/localhost/6333' || exit 1"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
-          --health-start-period 20s
+          --health-retries 12
+          --health-start-period 10s
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -46,11 +46,12 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: packages/api/requirements.txt
-      - name: Install API deps
+      - name: Install API + RAG deps
         run: |
           cd packages/api
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install -r ${{ github.workspace }}/packages/rag/requirements.txt
       - name: Install e2e deps
         run: ${{ github.workspace }}/packages/api/.venv/bin/pip install -r e2e/requirements.txt
       - name: Run pytest
